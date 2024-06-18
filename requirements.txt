@@ -1,0 +1,11 @@
+numpy==1.26.1
+torch==2.1.0
+deepinv
+wandb==0.15.12
+onnx==1.15.0
+streamlit==1.28.1
+jupyterlab==4.0.7
+munch==4.0.0
+natsort==8.4.0
+py-markdown-table==0.4.0
+kornia==0.7.0
