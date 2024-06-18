@@ -19,6 +19,8 @@ Template for deep learning experiments using the DeepInverse library
 
 - `bash scripts/train.sh`
 
+Replace data, physics, model and losses in `scripts/train.py` for your own problem. Log into Weights & Biases to see the results.
+
 ### Run eval
 
 TBC

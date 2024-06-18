@@ -9,6 +9,9 @@ import wandb
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split
+from torchvision.datasets import ImageFolder
+from torchvision.transforms import Compose, ToTensor, Resize
+from torchvision.datasets.utils import download_and_extract_archive
 import deepinv as dinv
 
 from utils import *
@@ -37,19 +40,47 @@ device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
 with wandb.init(project=project_name, config=config, dir="./wandb"):
     config = wandb.config
 
-    dataset = ... #TODO
+    # Define physics
+    physics = dinv.physics.Inpainting((3, 256, 256))
+
+    # Download Urban100 dataset
+    download_and_extract_archive(
+        "https://huggingface.co/datasets/eugenesiow/Urban100/resolve/main/data/Urban100_HR.tar.gz?download=true",
+        "Urban100",
+        filename="Urban100_HR.tar.gz",
+        md5="65d9d84a34b72c6f7ca1e26a12df1e4c",
+    )
+
+    train_dataset, test_dataset = random_split(
+        ImageFolder(
+            "Urban100", transform=Compose([ToTensor(), Resize(256)])
+        ),
+        (0.8, 0.2),
+    )
+
+    # Prepare dataset of images and measurements
+    dataset_path = dinv.datasets.generate_dataset(
+        train_dataset=train_dataset,
+        test_dataset=test_dataset,
+        physics=physics,
+        device=device,
+        save_dir="Urban100",
+    )
+
+    train_dataloader = DataLoader(
+        dinv.datasets.HDF5Dataset(dataset_path, train=True), shuffle=True, batch_size=config.batch_size,
+    )
+    test_dataloader = DataLoader(
+        dinv.datasets.HDF5Dataset(dataset_path, train=False), shuffle=False, batch_size=config.batch_size,
+    )
     
-    physics = dinv.physics.MRI((64, 64))
-
-    train_dataset, test_dataset = random_split(dataset, (0.8, 0.2))
-
-    train_dataloader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, num_workers=0, pin_memory=True, shuffle=True)
-    test_dataloader  = DataLoader(dataset= test_dataset, batch_size=config.batch_size, num_workers=0, pin_memory=True, shuffle=False)
-
+    # Define loss
     losses = dinv.loss.SupLoss()
 
+    # Define model
     model = dinv.models.UNet().to(device)
 
+    # Define trainer
     trainer = dinv.training.Trainer(
         model = model,
         physics = physics,
