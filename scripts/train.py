@@ -37,7 +37,7 @@ device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
 with wandb.init(project=project_name, config=config, dir="./wandb"):
     config = wandb.config
 
-    dataset = ...
+    dataset = ... #TODO
     
     physics = dinv.physics.MRI((64, 64))
 

@@ -27,6 +27,7 @@ TBC
 
 ### Folder structure
 
+- `docs`: Quarto rendered HTML notebooks
 - `models`: torch models saved by deepinv training.
 - `notebooks`: IPython notebooks for experiments.
 - `results`: evaluation files and visualisations from eval script
@@ -37,3 +38,4 @@ TBC
 ### Render notebooks
 
 - [Install quarto](https://quarto.org/docs/get-started/) and `quarto render`
+- View HTML files in `docs/notebooks` or optionally deploy to a static site on GitHub Pages
