@@ -116,7 +116,7 @@ for id in runs.keys():
     config["metrics_init"] = [avg(t) for t in zip(*metrics_x_init)]
     
     plot_x_hat_labels.append(args_runs[id])
-    plot_x_hat_results.append(round(config["metrics"], 2))
+    plot_x_hat_results.append(round(config["metrics"][0], 2)) #TODO choose which metric to be displayed on plot
 
     results[id] = config
 
@@ -134,7 +134,7 @@ if args.plot:
             *plot_x_hat_images
         ], 
         titles=["y (measurements)", "No learning", "x (GT)", *plot_x_hat_labels],
-        labels=[None, round(config["metrics_init"], 2), None, *plot_x_hat_results],
+        labels=[None, round(config["metrics_init"], 2), None, *plot_x_hat_results], # uses init's metric from last ite since all the same anyway
         save_fn=base_fn,
     )
 
