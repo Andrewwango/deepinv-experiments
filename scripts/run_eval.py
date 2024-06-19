@@ -45,7 +45,7 @@ def plot_results(*args, save_fn=None, dpi=(300), **kwargs):
     for d in dpi:
         fig.savefig(f"{save_fn}_{d}", dpi=d)
 
-wandb_runs = wandb.Api().runs("ei-experiments")
+wandb_runs = wandb.Api().runs("deepinv-experiments")
 with open("scripts/run_eval.cfg.json", "r") as f:
     args_runs = json.load(f)[args.runs]
 runs = {
