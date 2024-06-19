@@ -89,7 +89,7 @@ for id in runs.keys():
     model.load_state_dict(checkpoint["state_dict"], strict=False)
     model.eval()
 
-    metrics_x_hat, metrics_x_init, plot_x_hat, plot_x, plot_x_init, plot_y = [], [], [], [], [], [], [], []
+    metrics_x_hat, metrics_x_init, plot_x_hat, plot_x, plot_x_init, plot_y = [], [], [], [], [], []
 
     for i, (x, y) in tqdm(enumerate(test_dataloader)):
         with torch.no_grad():
