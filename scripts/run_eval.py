@@ -29,16 +29,16 @@ def avg(arr):
     return sum(arr) / len(arr) if len(arr) > 0 else 0
 
 def move_models_to_datastore():
-    if len(glob(f'{args.local_store}/*')) > 0:
-        os.makedirs(args.remote_store, exist_ok=True)
-        #move_command = f'[ ! -f {local_store}/* ] || mv {local_store}/* {remote_store}/'
-        move_command = f'mv {args.local_store}/* {args.remote_store}/'
+    if len(glob(f'{args.model_dir_local}/*')) > 0:
+        os.makedirs(args.model_dir_remote, exist_ok=True)
+        #move_command = f'[ ! -f {args.model_dir_local}/* ] || mv {args.model_dir_local}/* {args.model_dir_remote}/'
+        move_command = f'mv {args.model_dir_local}/* {args.model_dir_remote}/'
         print(move_command)
         call(move_command, shell=True)
         print("Moved folders")
     else:
-        print(f"Local model folder {args.local_store} empty")
-    return args.remote_store
+        print(f"Local model folder {args.model_dir_local} empty")
+    return args.model_dir_remote
 
 def plot_results(*args, save_fn=None, dpi=(300), **kwargs):
     fig = dinv.utils.plot_inset(*args, show=False, save_fn=None, return_fig=True, **kwargs)
