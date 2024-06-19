@@ -1,5 +1,5 @@
 # DeepInverse experiments template
-Template for deep learning experiments using the DeepInverse library
+Template for deep learning experiments using the [DeepInverse](https://deepinv.github.io/) library
 
 ## Get started
 
@@ -17,13 +17,23 @@ Template for deep learning experiments using the DeepInverse library
 
 ### Run training
 
-- `bash scripts/train.sh`
+This runs a full training, see `scripts/train.py` for full parameters. Replace data, physics, model and losses in `scripts/train.py` for your own problem. Log into Weights & Biases to see the results.
 
-Replace data, physics, model and losses in `scripts/train.py` for your own problem. Log into Weights & Biases to see the results.
+`python scripts/train.py --epochs 2 --arg2`
+
+Alternatively, collect scripts in a bash file to run multiple scripts:
+
+`bash scripts/train.sh`
 
 ### Run eval
 
-TBC
+This runs an evaluation on multiple runs given in `run_eval.cfg.json`, collects test metrics in a `json` file, plots and saves sample reconstructions and outputs into a specified remote directory.
+
+`python scripts/run_eval.py --runs "test" --plot --save_recon`
+
+Alternatively, collect scripts in a bash file to run multiple scripts:
+
+`bash scripts/run_eval.sh`
 
 ## Notes
 
