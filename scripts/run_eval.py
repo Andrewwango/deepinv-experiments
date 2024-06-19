@@ -112,8 +112,8 @@ for id in runs.keys():
     plot_x_hat_images += [torch.cat(plot_x_hat)]
 
     config["title"] = args_runs[id]
-    config["metrics"] = avg(list(map(list, zip(*metrics_x_hat)))) #transpose list of lists
-    config["metrics_init"] = avg(list(map(list, zip(*metrics_x_init))))
+    config["metrics"] = [avg(t) for t in zip(*metrics_x_hat)]
+    config["metrics_init"] = [avg(t) for t in zip(*metrics_x_init)]
     
     plot_x_hat_labels.append(args_runs[id])
     plot_x_hat_results.append(round(config["metrics"], 2))
