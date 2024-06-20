@@ -40,7 +40,7 @@ def move_models_to_datastore():
         print(f"Local model folder {args.model_dir_local} empty")
     return args.model_dir_remote
 
-def plot_results(*args, save_fn=None, dpi=(300), **kwargs):
+def plot_results(*args, save_fn=None, dpi=(300,), **kwargs):
     fig = dinv.utils.plot_inset(*args, show=False, save_fn=None, return_fig=True, **kwargs)
     for d in dpi:
         fig.savefig(f"{save_fn}_{d}", dpi=d)
@@ -105,8 +105,8 @@ for id in runs.keys():
                 plot_x.append(x)
                 plot_y.append(y)
 
-            metrics_x_init.append([metric(x_init, x) for metric in metrics])
-            metrics_x_hat.append([metric(x1, x) for metric in metrics])
+            metrics_x_init.append([metric(x_init, x).item() for metric in metrics])
+            metrics_x_hat.append([metric(x1, x).item() for metric in metrics])
     
     plot_x, plot_x_init, plot_y = [torch.cat(imgs) if len(imgs) > 0 else [] for imgs in (plot_x, plot_x_init, plot_y)] #gets replaced on each ite
     plot_x_hat_images += [torch.cat(plot_x_hat)]
@@ -117,6 +117,7 @@ for id in runs.keys():
     
     plot_x_hat_labels.append(args_runs[id])
     plot_x_hat_results.append(round(config["metrics"][0], 2)) #TODO choose which metric to be displayed on plot
+    plot_x_init_result = round(config["metrics_init"][0], 2) #TODO choose which metric to be displayed on plot
 
     results[id] = config
 
@@ -134,7 +135,7 @@ if args.plot:
             *plot_x_hat_images
         ], 
         titles=["y (measurements)", "No learning", "x (GT)", *plot_x_hat_labels],
-        labels=[None, round(config["metrics_init"], 2), None, *plot_x_hat_results], # uses init's metric from last ite since all the same anyway
+        labels=[None, plot_x_init_result, None, *plot_x_hat_results], # uses init's metric from last ite since all the same anyway
         save_fn=base_fn,
     )
 
