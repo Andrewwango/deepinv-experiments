@@ -64,7 +64,7 @@ test_dataloader = torch.utils.data.DataLoader(..., shuffle=False, batch_size=1) 
 
 model = ....to(device) #TODO
 
-metrics = [dinv.loss.PSNR()]
+metrics = [dinv.loss.PSNR(reduction="mean")] # Assume batches all same size
 
 model_dir = move_models_to_datastore()
 
