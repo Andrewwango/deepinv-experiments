@@ -1,12 +1,11 @@
+## Script to evaluate multiple runs, plot images, calculate metrics and save reconstructions.
+
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
-from subprocess import call
-from glob import glob
 from argparse import ArgumentParser
 from munch import DefaultMunch
-from natsort import natsorted
 from tqdm import tqdm
 
 import wandb
@@ -18,33 +17,13 @@ from utils import *
 parser = ArgumentParser()
 parser.add_argument("-s", "--sample", nargs="+", type=int, default=[0], help="Which images to plot from dataloader")
 parser.add_argument("-r", "--runs", type=str, default="", help="Name of run set from run_eval.cfg")
-parser.add_argument("--model_dir_local", type=str, default="/home/s2558406/Repos/deepinv-experiments/models", help="Dir where models saved")
-parser.add_argument("--model_dir_remote", type=str, default="/home/s2558406/RDS/models/deepinv-experiments", help="Dir for results to be saved to")
+parser.add_argument("--model_dir", type=str, default="models", help="Dir where models saved")
 parser.add_argument("--plot", action="store_true", help="Whether plot image results")
 parser.add_argument("--save_recon", action="store_true", help="Whether save reconstructed images as numpy volumes")
-
+parser.add_argument("--skip_metrics", action="store_true")
 args = parser.parse_args()
 
-def avg(arr):
-    return sum(arr) / len(arr) if len(arr) > 0 else 0
-
-def move_models_to_datastore():
-    if len(glob(f'{args.model_dir_local}/*')) > 0:
-        os.makedirs(args.model_dir_remote, exist_ok=True)
-        #move_command = f'[ ! -f {args.model_dir_local}/* ] || mv {args.model_dir_local}/* {args.model_dir_remote}/'
-        move_command = f'mv {args.model_dir_local}/* {args.model_dir_remote}/'
-        print(move_command)
-        call(move_command, shell=True)
-        print("Moved folders")
-    else:
-        print(f"Local model folder {args.model_dir_local} empty")
-    return args.model_dir_remote
-
-def plot_results(*args, save_fn=None, dpi=(300,), **kwargs):
-    fig = dinv.utils.plot_inset(*args, show=False, save_fn=None, return_fig=True, **kwargs)
-    for d in dpi:
-        fig.savefig(f"{save_fn}_{d}", dpi=d)
-
+## Load and choose runs
 wandb_runs = wandb.Api().runs("deepinv-experiments")
 with open("scripts/run_eval.cfg.json", "r") as f:
     args_runs = json.load(f)[args.runs]
@@ -58,46 +37,39 @@ print(f"Evaluating {len(runs)} runs")
 
 device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
 
-physics = ... #TODO
-
-test_dataloader = torch.utils.data.DataLoader(..., shuffle=False, batch_size=1) #TODO
-
-model = ....to(device) #TODO
-
-metrics = [dinv.loss.PSNR()]
-
-model_dir = move_models_to_datastore()
-
+## Iterate through runs
 results = {}
-
 ite = 0
 plot_x_hat_images, plot_x_hat_labels, plot_x_hat_results = [], [], []
 for id in runs.keys():
-    if id not in os.listdir(f"{model_dir}"): continue
-    ite += 1
-    
+    if id not in os.listdir(f"{args.model_dir}"): continue
+    ite += 1    
     config = runs[id]
-    
-    base_fn = f"{model_dir}/{id}/*/ckp_"
-    ckpt_fn = natsorted(
-        glob(f"{model_dir}/{id}/*/ckp_*.pth.tar")
-    )[-1]
-    checkpoint = torch.load(ckpt_fn, map_location=device)
-    
-    print(f"{ite}: {id} epochs {config.epochs} ckpt {os.path.basename(ckpt_fn)}")
+    print(f"{ite}: {id} trained for epochs {config.epochs}")    
 
-    model.load_state_dict(checkpoint["state_dict"], strict=False)
-    model.eval()
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
+    generator = torch.Generator().manual_seed(config.seed)
 
+    ## Define experiment
+    physics = define_physics(config, device=device, generator=generator)
+    _, test_dataloader = define_data(config, physics=physics, batch_size=1, generator=generator)
+    metrics = define_metrics(config)
+    model = define_model(config, device=device)
+    _, model = define_loss(config, model=model, device=device)
+    model = load_model(model, args.model_dir, id, device=device)
+
+    ## Iterate through dataset
     metrics_x_hat, metrics_x_init, plot_x_hat, plot_x, plot_x_init, plot_y = [], [], [], [], [], []
-
     for i, (x, y) in tqdm(enumerate(test_dataloader)):
         with torch.no_grad():
-            x = x.to(device)
-            y = y.to(device)
+            if i in args.sample or not args.skip_metrics:
+                x = x.to(device)
+                y = y.to(device)
+                #physics.update_parameters(mask=mask.to(device))
 
-            x1 = model(y, physics)
-            x_init = physics.A_adjoint(y)
+                x1 = model(y, physics)
+                x_init = physics.A_adjoint(y)
 
             if i in args.sample:
                 plot_x_hat.append(x1)
@@ -108,26 +80,29 @@ for id in runs.keys():
             metrics_x_init.append([metric(x_init, x).item() for metric in metrics])
             metrics_x_hat.append([metric(x1, x).item() for metric in metrics])
     
+    ## Save results
     plot_x, plot_x_init, plot_y = [torch.cat(imgs) if len(imgs) > 0 else [] for imgs in (plot_x, plot_x_init, plot_y)] #gets replaced on each ite
     plot_x_hat_images += [torch.cat(plot_x_hat)]
 
     config["title"] = args_runs[id]
-    config["metrics"] = [avg(t) for t in zip(*metrics_x_hat)]
-    config["metrics_init"] = [avg(t) for t in zip(*metrics_x_init)]
+    if not args.skip_metrics:
+        config["metrics"] = [avg_and_std(t) for t in zip(*metrics_x_hat)]
+        config["metrics_init"] = [avg_and_std(t) for t in zip(*metrics_x_init)]
     
     plot_x_hat_labels.append(args_runs[id])
-    plot_x_hat_results.append(round(config["metrics"][0], 2)) #TODO choose which metric to be displayed on plot
-    plot_x_init_result = round(config["metrics_init"][0], 2) #TODO choose which metric to be displayed on plot
+    plot_x_hat_results.append(round(config["metrics"][0][0], 2)) # NOTE this picks the first metric by default
+    plot_x_init_result = round(config["metrics_init"][0][0], 2) # gets replaced on every ite
 
     results[id] = config
 
-base_fn = f"{model_dir}/eval_{args.runs}"
+base_fn = f"{args.model_dir}/eval_{args.runs}"
 
-with open(f"{base_fn}.json", "w") as f:
-    json.dump(results, f)
+if not args.skip_metrics:
+    with open(f"{base_fn}.json", "w") as f:
+        json.dump(results, f)
 
 if args.plot:
-    plot_results(
+    dinv.utils.plot_inset(
         [
             plot_y,
             plot_x_init,
@@ -135,18 +110,27 @@ if args.plot:
             *plot_x_hat_images
         ], 
         titles=["y (measurements)", "No learning", "x (GT)", *plot_x_hat_labels],
-        labels=[None, plot_x_init_result, None, *plot_x_hat_results], # uses init's metric from last ite since all the same anyway
+        labels=[None, plot_x_init_result, None, *plot_x_hat_results],
         save_fn=base_fn,
+        show=False,
+        dpi=300,
     )
 
 if args.save_recon:
     save_dict = {}
-    for (x_hat, title) in zip(plot_x_hat_images, plot_x_hat_labels):
+    for (x_hat, title, result) in zip(plot_x_hat_images, plot_x_hat_labels, plot_x_hat_results):
         save_dict[title] = x_hat.detach().cpu().numpy()
-    save_dict["x"] = plot_x.detach().cpu().numpy()
-    save_dict["x_init"] = plot_x_init.detach().cpu().numpy()
-    save_dict["y"] = plot_y.detach().cpu().numpy()
+        save_dict[title + "_result"] = str(result)
     
-    np.savez(base_fn, **save_dict)
+    np.savez(
+        base_fn,
+        x=plot_x.detach().cpu().numpy(),
+        y=plot_y.detach().cpu().numpy(),
+        x_init=plot_x_init.detach().cpu().numpy(),
+        x_result="",
+        y_result="",
+        x_init_result=str(plot_x_init_result),
+        **save_dict
+    )
     
     

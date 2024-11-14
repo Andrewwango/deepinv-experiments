@@ -1,1 +1,1 @@
-python scripts/train.py --epochs 2 --arg2
+python scripts/train.py --epochs 2

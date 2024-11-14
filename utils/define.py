@@ -1,0 +1,57 @@
+from typing import List, Union, Tuple
+from torch import Generator
+from torch.nn import Module
+from torch.optim import Adam, Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torch.utils.data import DataLoader, random_split
+from torchvision.transforms import Compose, ToTensor, Resize, CenterCrop
+
+import deepinv as dinv
+from deepinv.physics import Physics, LinearPhysics
+from deepinv.loss import Loss, Metric
+
+## Edit these definitions for your own experiment
+
+def define_model(config: dict, device="cpu") -> Module:
+    return dinv.models.DnCNN(depth=2, nf=8, pretrained=None, device=device).to(device)
+
+def define_loss(config: dict, model: Module = None, device="cpu") -> Union[Loss, List[Loss]]:
+    return [dinv.loss.SupLoss()], model
+
+def define_metrics(config: dict) -> Union[Metric, List[Metric]]:
+    return [dinv.loss.PSNR(), dinv.loss.SSIM()]
+
+def define_data(config: dict, batch_size: int = None, physics: Physics = None, generator: Generator = None) -> Tuple[DataLoader]:
+    batch_size = batch_size if batch_size is not None else config.batch_size
+
+    train_dataset, test_dataset = random_split(
+        dinv.datasets.Urban100HR(".", download=True, transform=Compose([
+            ToTensor(),
+            CenterCrop(128),
+            Resize(64, antialias=True),
+        ])),
+        (0.8, 0.2),
+        generator=generator
+    )
+
+    dataset_path = dinv.datasets.generate_dataset(
+        train_dataset=train_dataset,
+        test_dataset=test_dataset,
+        physics=physics,
+        device="cpu",
+        save_dir="Urban100",
+    )
+
+    train_dataloader = DataLoader(
+        dinv.datasets.HDF5Dataset(dataset_path, train=True), shuffle=True, batch_size=batch_size, generator=generator
+    )
+    test_dataloader = DataLoader(
+        dinv.datasets.HDF5Dataset(dataset_path, train=False), shuffle=False, batch_size=batch_size,
+    )
+    return train_dataloader, test_dataloader
+
+def define_physics(config: dict, device="cpu", generator: Generator = None) -> Union[LinearPhysics, Physics]:
+    return dinv.physics.Inpainting((3, 64, 64), mask=0.6)
+
+def define_optimizer_scheduler(model: Module, config: dict) -> Tuple[Optimizer, LRScheduler]:
+    return Adam(model.parameters(), lr=config.lr_init), None
