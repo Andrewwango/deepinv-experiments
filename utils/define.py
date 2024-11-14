@@ -18,8 +18,8 @@ def define_model(config: dict, device="cpu") -> Module:
 def define_loss(config: dict, model: Module = None, device="cpu") -> Union[Loss, List[Loss]]:
     return [dinv.loss.SupLoss()], model
 
-def define_metrics(config: dict) -> Union[Metric, List[Metric]]:
-    return [dinv.loss.PSNR(), dinv.loss.SSIM()]
+def define_metrics(config: dict, reduction=None) -> Union[Metric, List[Metric]]:
+    return [dinv.loss.PSNR(reduction=reduction), dinv.loss.SSIM(reduction=reduction)]
 
 def define_data(config: dict, batch_size: int = None, physics: Physics = None, generator: Generator = None) -> Tuple[DataLoader]:
     batch_size = batch_size if batch_size is not None else config.batch_size

@@ -60,7 +60,8 @@ for id in runs.keys():
     model = load_model(model, args.model_dir, id, device=device)
 
     ## Iterate through dataset
-    metrics_x_hat, metrics_x_init, plot_x_hat, plot_x, plot_x_init, plot_y = [], [], [], [], [], []
+    metrics_x_hat, metrics_x_init = [dinv.utils.AverageMeter(m.__class__.__name__) for m in metrics], [dinv.utils.AverageMeter(m.__class__.__name__) for m in metrics]
+    plot_x_hat, plot_x, plot_x_init, plot_y = [], [], [], []
     for i, (x, y) in tqdm(enumerate(test_dataloader)):
         with torch.no_grad():
             if i in args.sample or not args.skip_metrics:
@@ -77,17 +78,18 @@ for id in runs.keys():
                 plot_x.append(x)
                 plot_y.append(y)
 
-            metrics_x_init.append([metric(x_init, x).item() for metric in metrics])
-            metrics_x_hat.append([metric(x1, x).item() for metric in metrics])
+            for m, meter_x_hat, meter_x_init in zip(metrics, metrics_x_hat, metrics_x_init):
+                meter_x_hat .update(m(x1,     x).detach().cpu().numpy())
+                meter_x_init.update(m(x_init, x).detach().cpu().numpy())
     
-    ## Save results
+    ## Log results
     plot_x, plot_x_init, plot_y = [torch.cat(imgs) if len(imgs) > 0 else [] for imgs in (plot_x, plot_x_init, plot_y)] #gets replaced on each ite
     plot_x_hat_images += [torch.cat(plot_x_hat)]
 
     config["title"] = args_runs[id]
     if not args.skip_metrics:
-        config["metrics"] = [avg_and_std(t) for t in zip(*metrics_x_hat)]
-        config["metrics_init"] = [avg_and_std(t) for t in zip(*metrics_x_init)]
+        config["metrics"]      = [(meter.avg, meter.std) for meter in metrics_x_hat]
+        config["metrics_init"] = [(meter.avg, meter.std) for meter in metrics_x_init]
     
     plot_x_hat_labels.append(args_runs[id])
     plot_x_hat_results.append(round(config["metrics"][0][0], 2)) # NOTE this picks the first metric by default
@@ -95,12 +97,14 @@ for id in runs.keys():
 
     results[id] = config
 
+## Save metrics
 base_fn = f"{args.model_dir}/eval_{args.runs}"
 
 if not args.skip_metrics:
     with open(f"{base_fn}.json", "w") as f:
         json.dump(results, f)
 
+## Save plots
 if args.plot:
     dinv.utils.plot_inset(
         [
@@ -116,6 +120,7 @@ if args.plot:
         dpi=300,
     )
 
+## Save reconstructions
 if args.save_recon:
     save_dict = {}
     for (x_hat, title, result) in zip(plot_x_hat_images, plot_x_hat_labels, plot_x_hat_results):
