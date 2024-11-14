@@ -1,18 +1,15 @@
-*.pth.tar
 *.onnx
 wandb/*
 !wandb/wandb/
 wandb/wandb/*
 !wandb/wandb/.temp
-*.png
-*.jpg
 *.h5
 *.pt
 *.tif
 *.mat
-*.npz
 *.pkl
 *.gif
+*.tar.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

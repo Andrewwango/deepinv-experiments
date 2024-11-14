@@ -17,9 +17,9 @@ Template for deep learning experiments using the [DeepInverse](https://deepinv.g
 
 ### Run training
 
-This runs a full training, see `scripts/train.py` for full parameters. Replace data, physics, model and losses in `scripts/train.py` for your own problem. Log into Weights & Biases to see the results.
+This runs a full training, see `scripts/train.py` for full parameters, logs progress to Weights & Biases (wandb), and saves model weights to a directory in `--model_dir`. Replace data, physics, model and losses in `scripts/train.py` for your own problem. Log into Weights & Biases to see the results under project name `deepinv-experiments`.
 
-`python scripts/train.py --epochs 2 --arg2`
+`python scripts/train.py --epochs 2`
 
 Alternatively, collect scripts in a bash file to run multiple scripts:
 
@@ -27,20 +27,23 @@ Alternatively, collect scripts in a bash file to run multiple scripts:
 
 ### Run eval
 
-This runs an evaluation on multiple runs given in `run_eval.cfg.json`, collects test metrics in a `json` file, plots and saves sample reconstructions and outputs into a specified remote directory.
+This runs an evaluation on multiple wandb runs given in `run_eval.cfg.json`, collects test metrics in a `json` file, plots and saves sample reconstructions and outputs into a specified remote directory.
 
-`python scripts/run_eval.py --runs "test" --plot --save_recon`
+`python scripts/run_eval.py --runs "test" --plot --save_recon --sample 0 1 2`
 
 Alternatively, collect scripts in a bash file to run multiple scripts:
 
 `bash scripts/run_eval.sh`
+
+## View results
+
+You can view results locally using the [vis_results.ipynb](notebooks/vis_results.ipynb) notebook, plot or export to markdown or latex.
 
 ## Notes
 
 ### Folder structure
 
 - `docs`: Quarto rendered HTML notebooks
-- `models`: torch models saved by deepinv training.
 - `notebooks`: IPython notebooks for experiments.
 - `results`: evaluation files and visualisations from eval script
 - `scripts`: scripts for launching training and evaluation
