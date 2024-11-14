@@ -4,7 +4,7 @@ Template for deep learning experiments using the [DeepInverse](https://deepinv.g
 ## Get started
 
 - Clone repository: `git clone https://github.com/Andrewwango/deepinv-experiments.git && cd deepinv-experiments`
-- Create a local venv: `python -m venv venv` and activate with `source venv/Scripts/activate` (deactivate with `deactivate`)
+- Create a local venv: `python -m venv venv` and activate with `source venv/Scripts/activate` (deactivate with `deactivate`). Alternatively create an environment with `conda`.
 - Alternatively create a conda env: `conda create -n myvenv python=3.11` and activate with `conda activate myvenv`
 - Install requirements: `pip install -r requirements.txt`
 - Login to Weights & Biases `wandb login`
