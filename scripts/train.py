@@ -30,10 +30,11 @@ config = DefaultMunch(
 project_name="deepinv-experiments"
 os.makedirs(args.model_dir, exist_ok=True)
 
+device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
+
 torch.manual_seed(config.seed)
 np.random.seed(config.seed)
-generator = torch.Generator().manual_seed(config.seed)
-device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
+generator = torch.Generator(device=device).manual_seed(config.seed)
 
 with wandb.init(project=project_name, config=config, dir="./wandb"):
     config = wandb.config
