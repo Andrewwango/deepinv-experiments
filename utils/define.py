@@ -21,13 +21,13 @@ def define_loss(config: dict, model: Module = None, device="cpu") -> Union[Loss,
 def define_metrics(config: dict, reduction=None) -> Union[Metric, List[Metric]]:
     return [dinv.loss.PSNR(reduction=reduction), dinv.loss.SSIM(reduction=reduction)]
 
-def define_data(config: dict, random_split_seed: int, batch_size: int = None, physics: Physics = None, generator: Generator = None, device="cpu") -> Tuple[DataLoader]:
+def define_data(config: dict, random_split_seed: int, data_dir: str = ".", batch_size: int = None, physics: Physics = None, generator: Generator = None, device="cpu") -> Tuple[DataLoader]:
     batch_size = batch_size if batch_size is not None else config.batch_size
 
     random_split_generator = Generator(device="cpu").manual_seed(random_split_seed) # separate generator for random_split to a) stay on cpu and b) prevent generator conditional fork
 
     train_dataset, test_dataset = random_split(
-        dinv.datasets.Urban100HR(".", download=True, transform=Compose([
+        dinv.datasets.Urban100HR(data_dir, download=True, transform=Compose([
             ToTensor(),
             CenterCrop(128),
             Resize(64, antialias=True),
@@ -41,7 +41,7 @@ def define_data(config: dict, random_split_seed: int, batch_size: int = None, ph
         test_dataset=test_dataset,
         physics=physics,
         device=device,
-        save_dir="Urban100",
+        save_dir=f"{data_dir}/Urban100",
     )
 
     train_dataloader = DataLoader(
