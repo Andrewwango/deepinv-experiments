@@ -41,7 +41,7 @@ with wandb.init(project=project_name, config=config, dir="./wandb"):
 
     ## Define experiment
     physics = define_physics(config, device=device, generator=generator)
-    train_dataloader, test_dataloader = define_data(config, batch_size=1, physics=physics, generator=generator)
+    train_dataloader, test_dataloader = define_data(config, random_split_seed=config.seed, physics=physics, generator=generator, device=device)
     metrics = define_metrics(config)
     model = define_model(config, device=device)
     loss, model = define_loss(config, model=model, device=device)

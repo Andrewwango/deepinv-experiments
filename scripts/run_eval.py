@@ -53,7 +53,7 @@ for id in runs.keys():
 
     ## Define experiment
     physics = define_physics(config, device=device, generator=generator)
-    _, test_dataloader = define_data(config, physics=physics, batch_size=1, generator=generator)
+    _, test_dataloader = define_data(config, random_split_seed=config.seed, batch_size=1, physics=physics, generator=generator, device=device)
     metrics = define_metrics(config)
     model = define_model(config, device=device)
     _, model = define_loss(config, model=model, device=device)

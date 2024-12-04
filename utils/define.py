@@ -21,8 +21,10 @@ def define_loss(config: dict, model: Module = None, device="cpu") -> Union[Loss,
 def define_metrics(config: dict, reduction=None) -> Union[Metric, List[Metric]]:
     return [dinv.loss.PSNR(reduction=reduction), dinv.loss.SSIM(reduction=reduction)]
 
-def define_data(config: dict, batch_size: int = None, physics: Physics = None, generator: Generator = None) -> Tuple[DataLoader]:
+def define_data(config: dict, random_split_seed: int, batch_size: int = None, physics: Physics = None, generator: Generator = None, device="cpu") -> Tuple[DataLoader]:
     batch_size = batch_size if batch_size is not None else config.batch_size
+
+    random_split_generator = Generator(device="cpu").manual_seed(random_split_seed) # separate generator for random_split to a) stay on cpu and b) prevent generator conditional fork
 
     train_dataset, test_dataset = random_split(
         dinv.datasets.Urban100HR(".", download=True, transform=Compose([
@@ -31,14 +33,14 @@ def define_data(config: dict, batch_size: int = None, physics: Physics = None, g
             Resize(64, antialias=True),
         ])),
         (0.8, 0.2),
-        generator=generator
+        generator=random_split_generator
     )
 
     dataset_path = dinv.datasets.generate_dataset(
         train_dataset=train_dataset,
         test_dataset=test_dataset,
         physics=physics,
-        device="cpu",
+        device=device,
         save_dir="Urban100",
     )
 
